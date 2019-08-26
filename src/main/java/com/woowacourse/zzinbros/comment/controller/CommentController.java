@@ -2,6 +2,7 @@ package com.woowacourse.zzinbros.comment.controller;
 
 import com.woowacourse.zzinbros.comment.domain.Comment;
 import com.woowacourse.zzinbros.comment.dto.CommentRequestDto;
+import com.woowacourse.zzinbros.comment.dto.CommentResponseDto;
 import com.woowacourse.zzinbros.comment.service.CommentService;
 import com.woowacourse.zzinbros.post.domain.Post;
 import com.woowacourse.zzinbros.post.service.PostService;
@@ -12,6 +13,9 @@ import com.woowacourse.zzinbros.user.web.support.UserSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/comments")
@@ -26,18 +30,32 @@ public class CommentController {
         this.userService = userService;
     }
 
+    @GetMapping("/by-post/{postId}")
+    public ResponseEntity<List<CommentResponseDto>> getCommentsByPost(@PathVariable final Long postId) {
+        final Post post = postService.read(postId);
+        final List<Comment> comments = commentService.findByPost(post);
+        final List<CommentResponseDto> commentResponseDtos = comments.stream()
+                .map(CommentResponseDto::new)
+                .collect(Collectors.toList());
+        return new ResponseEntity<>(commentResponseDtos, HttpStatus.OK);
+    }
+
     @PostMapping
-    public ResponseEntity<Comment> add(@RequestBody final CommentRequestDto dto, @SessionInfo final UserSession userSession) {
+    public ResponseEntity<CommentResponseDto> add(@RequestBody final CommentRequestDto dto, @SessionInfo final UserSession userSession) {
         final User user = userService.findLoggedInUser(userSession.getDto());
         final Post post = postService.read(dto.getPostId());
         final String contents = dto.getContents();
-        return new ResponseEntity<>(commentService.add(user, post, contents), HttpStatus.CREATED);
+        final Comment comment = commentService.add(user, post, contents);
+        final CommentResponseDto responseDto = new CommentResponseDto(comment);
+        return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
     }
 
     @PutMapping
-    public ResponseEntity<Comment> edit(@RequestBody final CommentRequestDto dto, @SessionInfo final UserSession userSession) {
+    public ResponseEntity<CommentResponseDto> edit(@RequestBody final CommentRequestDto dto, @SessionInfo final UserSession userSession) {
         final User user = userService.findLoggedInUser(userSession.getDto());
-        return new ResponseEntity<>(commentService.update(dto.getCommentId(), dto.getContents(), user), HttpStatus.OK);
+        final Comment comment = commentService.update(dto.getCommentId(), dto.getContents(), user);
+        final CommentResponseDto responseDto = new CommentResponseDto(comment);
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 
     @DeleteMapping

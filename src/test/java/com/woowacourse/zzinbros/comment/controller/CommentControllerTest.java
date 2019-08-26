@@ -8,6 +8,7 @@ import com.woowacourse.zzinbros.comment.service.CommentService;
 import com.woowacourse.zzinbros.post.domain.Post;
 import com.woowacourse.zzinbros.post.service.PostService;
 import com.woowacourse.zzinbros.user.domain.User;
+import com.woowacourse.zzinbros.user.domain.repository.UserRepository;
 import com.woowacourse.zzinbros.user.dto.UserResponseDto;
 import com.woowacourse.zzinbros.user.service.UserService;
 import com.woowacourse.zzinbros.user.web.support.UserArgumentResolver;
@@ -19,15 +20,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import javax.swing.tree.ExpandVetoException;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
+import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -56,6 +67,9 @@ class CommentControllerTest extends BaseTest {
     UserService userService;
 
     @MockBean
+    UserRepository userRepository;
+
+    @MockBean
     PostService postService;
 
     @MockBean
@@ -77,8 +91,29 @@ class CommentControllerTest extends BaseTest {
     }
 
     @Test
-    void add_mapping() throws Exception {
+    void get_mapping() throws Exception {
+        final List<Comment> comments = new ArrayList<>(Arrays.asList(
+                new Comment(mockUser, mockPost, "comment1"),
+                new Comment(mockUser, mockPost, "comment2"),
+                new Comment(mockUser, mockPost, "comment3")
+        ));
+
         given(postService.read(MOCK_ID)).willReturn(mockPost);
+        given(commentService.findByPost(mockPost)).willReturn(comments);
+
+        mockMvc.perform(get(MAPPING_PATH + "/by-post/" + MOCK_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.[0].contents", is("comment1")))
+                .andExpect(jsonPath("$.[1].contents", is("comment2")))
+                .andExpect(jsonPath("$.[2].contents", is("comment3")));
+    }
+
+    @Test
+    void add_mapping() throws Exception {
+        given(userRepository.findById(MOCK_ID)).willReturn(Optional.ofNullable(mockUser));
+        given(userService.findUserById(MOCK_ID)).willReturn(mockUser);
+        given(postService.read(MOCK_ID)).willReturn(mockPost);
+        given(commentService.add(mockUser, mockPost, MOCK_CONTENTS)).willReturn(mockComment);
 
         mockMvc.perform(post(MAPPING_PATH)
                 .content(commentRequestDto)
