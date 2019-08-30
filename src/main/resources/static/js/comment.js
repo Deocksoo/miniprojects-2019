@@ -125,7 +125,7 @@ const CommentApp = (function () {
 
         const editMode = function (event) {
             const clicked = event.target.closest('a');
-            if ((clicked !== null) && clicked.classList.contains('comment-edit-btn')) {
+            if (clicked && clicked.classList.contains('comment-edit-btn')) {
                 const commentInfo = clicked.closest('.info');
                 const commentInput = clicked.closest('.comment-item').querySelector('.comment-input');
 
@@ -172,7 +172,7 @@ const CommentApp = (function () {
             const commentId = commentItem.dataset.commentId;
 
             const clicked = event.target.closest('a');
-            if ((clicked !== null) && clicked.classList.contains('comment-delete-btn')) {
+            if (clicked && clicked.classList.contains('comment-delete-btn')) {
                 Api.delete(`posts/${postId}/comments/${commentId}`)
                    .then(res => {
                        if (res.ok) {
